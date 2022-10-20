@@ -1,0 +1,33 @@
+node{
+    
+def mavenHome = tool name: "maven3.8.6"    
+    
+properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '5', daysToKeepStr: '', numToKeepStr: '5')), [$class: 'JobLocalConfiguration', changeReasonComment: ''], pipelineTriggers([pollSCM('* * * * *')])])    
+    
+echo "build number is: ${BUILD_NUMBER}"
+    
+stage('scmcode'){
+git branch: 'development', credentialsId: '7ddceaa1-b8ec-4e21-9435-cb8dbae2c95e', url: 'https://github.com/lal-job/maven-web-application.git'
+}    
+    
+stage('building'){
+sh "${mavenHome}/bin/mvn clean package"    
+}    
+    
+stage('sonarqubereport'){
+sh  "${mavenHome}/bin/mvn sonar:sonar"   
+}    
+    
+stage('uploadingintoartifactrepository'){
+sh  "${mavenHome}/bin/mvn deploy"   
+}    
+    
+stage('deployingintoTomcatserver'){
+sshagent(['82ca95bf-07a3-487c-9539-6bbd855035f5']) {
+sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@13.233.223.12:/opt/apache-tomcat-9.0.68/webapps/"
+}
+}
+    
+    
+    
+}
